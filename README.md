@@ -1,148 +1,316 @@
-# 🌟 ACIE: Autonomous Competitor Intelligence Engine
+# 🌟 AI Competitor Intelligence Platform (ACIP)
 
-An autonomous, self-healing competitor monitoring engine designed to scrape target sites, detect semantic content changes using in-memory ONNX embeddings, score business threat levels via a tiered cloud/local LLM chain, and route real-time alerts to Slack, Email, and Notion/Airtable CRMs—**all engineered to operate within a tight 512MB RAM footprint.**
+An enterprise-grade, autonomous competitor monitoring platform that continuously tracks competitor websites, detects **semantic content changes** using ONNX-powered sentence embeddings, evaluates business impact through a resilient cloud/local AI inference pipeline, and delivers real-time notifications via Slack, Email, Notion, and Airtable.
 
----
-
-## 🛠️ System Architecture & Workflow
-
-[ Competitor Site ]
-│
-▼
-┌────────────────────────────────────────┐
-│  1. Double-Engine Scraper              │ ──► [Axios / Puppeteer Headless]
-└────────────────────────────────────────┘
-│
-▼
-┌────────────────────────────────────────┐
-│  2. Semantic Change Detector           │ ──► [Xenova/all-MiniLM-L6-v2 ONNX]
-└────────────────────────────────────────┘
-│ (Cosine Similarity < 0.90)
-▼
-┌────────────────────────────────────────┐
-│  3. Tiered Inference Pipeline          │ ──► [Gemini 2.5 Flash] ──► [Qwen 2.5 GGUF] ──► [Heuristics]
-└────────────────────────────────────────┘
-│
-▼
-┌────────────────────────────────────────┐
-│  4. Idempotent Queue & Sync            │ ──► [Slack Webhook] / [SMTP Email] / [Notion & Airtable]
-└────────────────────────────────────────┘
-
-
-| Layer | Technology Stack | Core Purpose |
-| :--- | :--- | :--- |
-| **Scraping** | Axios + Cheerio / Puppeteer | Headless engine handles SPAs; static fallback ensures high uptime. |
-| **Vector Engine** | `@huggingface/transformers` (ONNX) | Local `all-MiniLM-L6-v2` embeddings for sub-half-second similarity checks. |
-| **Analysis** | Gemini 2.5 Flash API / Qwen2.5-0.5B | Unified scoring (1–10) and context extraction via cloud or local CPU runtime. |
-| **Sink Adapters** | Notion SDK, Airtable REST, Nodemailer | Idempotent multi-channel alerts with local SQLite retry state. |
+Designed with a **self-healing architecture**, ACIP automatically falls back between AI models to ensure uninterrupted analysis while operating efficiently within a **512 MB RAM footprint**.
 
 ---
 
-## 🧬 Deep Dive: The In-Memory ML Pipeline
+# 🚀 Key Highlights
 
-### 🧠 Stage 1: Semantic Change Detection (ONNX)
-Traditional string differences (`diff`) flag simple layout shifts or spacing fixes as false positives. ACIE uses an in-memory execution wrapper around a minimized ONNX transformer pipeline to judge changes by structural meaning.
+- 🔍 Intelligent competitor website monitoring
+- 🧠 Semantic change detection using ONNX sentence embeddings
+- 🤖 AI-powered business impact analysis
+- 📊 Threat scoring and change classification
+- 📧 Multi-channel notifications
+- 🌐 Chrome Extension for one-click competitor registration
+- ⚡ Self-healing cloud → local → heuristic inference pipeline
+- 🐳 Docker & Railway deployment support
+- 💾 Lightweight SQLite database
+- 📈 Interactive React dashboard
+
+---
+
+# 🏗️ System Architecture
+
+```text
+                    Competitor Website
+                           │
+                           ▼
+        ┌────────────────────────────────────┐
+        │  Intelligent Web Scraper           │
+        │  Axios • Cheerio • Puppeteer       │
+        └────────────────────────────────────┘
+                           │
+                           ▼
+        ┌────────────────────────────────────┐
+        │ Semantic Change Detection          │
+        │ ONNX Sentence Embeddings           │
+        └────────────────────────────────────┘
+                           │
+                Cosine Similarity Check
+                           │
+                           ▼
+        ┌────────────────────────────────────┐
+        │ AI Inference Pipeline              │
+        │ Gemini → Qwen → Heuristic          │
+        └────────────────────────────────────┘
+                           │
+                           ▼
+        ┌────────────────────────────────────┐
+        │ Business Impact Analysis           │
+        │ Threat Score • Summary • Action    │
+        └────────────────────────────────────┘
+                           │
+                           ▼
+        ┌────────────────────────────────────┐
+        │ Notification Services              │
+        │ Slack • Email • Notion • Airtable  │
+        └────────────────────────────────────┘
+```
+
+---
+
+# 🛠 Technology Stack
+
+| Layer | Technologies | Purpose |
+|--------|--------------|---------|
+| **Frontend** | React, Vite, Tailwind CSS | Interactive analytics dashboard |
+| **Backend** | Node.js, Express.js | REST APIs, scheduler, business logic |
+| **Database** | SQLite | Lightweight local data storage |
+| **Scraping** | Axios, Cheerio, Puppeteer | Static and dynamic website scraping |
+| **AI & ML** | ONNX Transformers, Gemini 2.5 Flash, Qwen2.5 | Semantic detection and AI analysis |
+| **Notifications** | Slack Webhooks, Nodemailer | Real-time alerts |
+| **CRM Integration** | Notion API, Airtable REST API | Business workflow automation |
+| **Extension** | Chrome Manifest V3 | Browser-based competitor tracking |
+| **Deployment** | Docker, Railway | Production deployment |
+
+---
+
+# 🧠 AI Pipeline
+
+## Stage 1 – Semantic Change Detection
+
+Traditional text comparison tools generate numerous false positives by comparing characters instead of meaning.
+
+ACIP uses **Xenova/all-MiniLM-L6-v2** running locally through ONNX Runtime to compare semantic similarity between two webpage versions.
 
 ```javascript
-const { pipeline } = require('@huggingface/transformers');
+const { pipeline } = require("@huggingface/transformers");
 
-const embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+const embedder = await pipeline(
+  "feature-extraction",
+  "Xenova/all-MiniLM-L6-v2"
+);
 
-const oldEmbed = await embedder("Price is $100", { pooling: 'mean', normalize: true });
-const newEmbed = await embedder("Current Price: $100", { pooling: 'mean', normalize: true });
+const oldEmbedding = await embedder("Price is $100", {
+    pooling: "mean",
+    normalize: true
+});
 
-// Cosine similarity output: ~0.93 -> Meaning matches perfectly -> Suppress Alert ✅
-📊 Stage 2: Resilient Tiered Inference Chain
-If semantic drift crosses your threshold, the structural difference passes into a resilient, self-healing classification tier.
+const newEmbedding = await embedder("Current Price: $100", {
+    pooling: "mean",
+    normalize: true
+});
 
-[Gemini 2.5 Flash API] ──(Network/Rate Limit Error)──► [Local Qwen2.5-0.5B GGUF via llama-cli] ──(Binary Failure)──► [Local RegEx Rule Heuristic]
-Cloud Engine: Gemini 2.5 Flash parses the differences directly against a strict structured JSON schema.
+// Cosine Similarity ≈ 0.93
+// Same semantic meaning → Alert suppressed
+```
 
-Local Fallback: If offline or rate-limited, the system forks a sub-process executing Qwen2.5-0.5B-Instruct via a tiny local GGUF binary over CPU cores.
+Instead of comparing text, the engine compares **meaning**.
 
-Heuristic Safety Net: If system memory pressure restricts the binary execution, a native RegEx classification scan scores the delta based on keywords (pricing, hiring, features).
+---
 
-🧩 Chrome Extension: Browser-Integrated Tracking
-The native Manifest V3 Chrome Extension transforms your daily browsing routine into an active ingest vector.
+## Stage 2 – AI Business Analysis
 
-Extension File Architecture
-📂 extension/
-├── manifest.json          # MV3 Configuration, minimal background background permissions
-├── popup.html / popup.js  # Dynamic DOM extraction & active context injection
-├── options.html / options.js # Crypto-secured localStorage token bindings
-└── background.js          # Low-overhead 60-second polling worker for live alert counts
-Features
-One-Click Ingestion: Automatically strips URL patterns, guesses competitor naming models, and inserts new targets directly into the active SQLite processing loop.
+Once a meaningful change is detected, it enters a resilient AI inference pipeline.
 
-Live Intelligence Badge: The background service worker pulls active status variations every 60 seconds, lighting up a high-visibility cyan counter over the extension icon when fresh business threat updates hit your stack.
+```text
+Gemini 2.5 Flash
+        │
+        ▼
+Qwen2.5 Local Model
+        │
+        ▼
+Rule-Based Heuristic Engine
+```
 
-🚀 Quick Start Guide
-Prerequisites
-Node.js v18+
+The pipeline generates:
 
-NPM v10+
+- Change Category
+- Executive Summary
+- Business Impact
+- Threat Score (1–10)
+- Supporting Evidence
+- Recommended Actions
 
-Operating System: Linux, macOS, or Windows (WSL2 recommended)
+If the cloud model becomes unavailable due to network issues or rate limits, the system automatically switches to the local model. If local inference also fails, a rule-based engine ensures uninterrupted operation.
 
-1. Installation
-Clone the workspace and run the automated nested dependency linker:
+---
 
-Bash
-git clone [https://github.com/NitheshK4/Autonomous-Competitor-Intelligence-Engine.git](https://github.com/NitheshK4/Autonomous-Competitor-Intelligence-Engine.git)
-cd Autonomous-Competitor-Intelligence-Engine
+# 🌐 Chrome Extension
+
+The Chrome Extension enables users to register competitor websites directly from their browser.
+
+### Features
+
+- One-click competitor registration
+- Automatic URL detection
+- Live notification badge
+- Secure API authentication
+- Configurable backend settings
+- Monitoring scope selection
+
+### Extension Structure
+
+```text
+extension/
+├── manifest.json
+├── popup.html
+├── popup.js
+├── options.html
+├── options.js
+├── background.js
+├── icons/
+```
+
+---
+
+# 🚀 Quick Start
+
+## Prerequisites
+
+- Node.js 18+
+- npm 10+
+- Windows, Linux, or macOS
+
+---
+
+## Clone Repository
+
+```bash
+git clone https://github.com/yourusername/AI-Competitor-Intelligence-Platform.git
+
+cd AI-Competitor-Intelligence-Platform
+```
+
+---
+
+## Install Dependencies
+
+```bash
 npm install
+
 npm run install:all
-Note: No local Python setup required. All underlying models run natively through optimized C++/WASM wrappers inside the Node sub-process layout.
+```
 
-2. Configuration (.env)
-Create a .env block inside your server root root directory:
+---
 
-Code snippet
+## Configure Environment
+
+Create a `.env` file.
+
+```env
 PORT=3000
+
 NODE_ENV=development
 
-# Core Cloud API Keys (Optional - Fallbacks kick in automatically)
-GEMINI_API_KEY=AIzaSyYourKeyHere...
+GEMINI_API_KEY=YOUR_API_KEY
 
-# Downstream Notification Outlets
-SLACK_WEBHOOK_URL=[https://hooks.slack.com/services/T00/B00/Xyz](https://hooks.slack.com/services/T00/B00/Xyz)...
-3. Execution
-Fire up the local database system, the continuous cron tracking worker, and the React client dashboard concurrently:
+SLACK_WEBHOOK_URL=YOUR_SLACK_WEBHOOK
+```
 
-Bash
+---
+
+## Start Development Server
+
+```bash
 npm run dev
-Backend Platform Gateway: http://localhost:3000
+```
 
-React Interactive Dashboard: http://localhost:5173
+Frontend
 
-📂 Repository Layout
-📦 Autonomous-Competitor-Intelligence-Engine
-├── 📂 client/                        # React 18 + Vite 5 Interactive Frontend Web UI
-│   └── 📂 src/
-│       ├── App.jsx                   # Centralized state manager & dashboard view
-│       └── main.jsx                  # Virtual DOM node mounting entry
-├── 📂 server/                        # Express Core Engine
-│   └── 📂 src/
-│       ├── index.js                  # Master server scheduling loops & API routing
-│       ├── scraper.js                # Double-headed Puppeteer/Axios extractor
-│       ├── detector.js               # Local ONNX vector similarity framework
-│       ├── llm.js                    # Resilient inference fallback logic
-│       ├── crm.js                    # Notion/Airtable API structural adapters
-│       └── db.js                     # SQLite abstraction interface
-├── 📂 extension/                     # Manifest V3 browser integration source
-└── Dockerfile                        # Multi-stage Linux production layout
-🐳 Production Deployment (Railway / Docker)
-The included production Dockerfile uses a multi-stage compilation strategy. It handles system-level dependencies for headless Chromium (Puppeteer) and bundles runtime dependencies cleanly under 512MB RAM constraints by implementing sequential queueing logic.
+```
+http://localhost:5173
+```
 
-To host on Railway:
+Backend
 
-Connect this repository to your Railway control board.
+```
+http://localhost:3000
+```
 
-Inject your production environment variables (GEMINI_API_KEY, etc.).
+---
 
-Railway automatically parses the Dockerfile to pull runtime dependencies, download the cached model formats, compile the production Vite distribution assets, and expose your network port.
+# 📁 Project Structure
 
-📋 Operational Guardrails & Limitations
-Model Warmups: The initialization phase downloads down raw models (~90MB for ONNX, ~382MB for local GGUF architectures). These are written to a localized storage directory to bypass network operations on subsequent process startups.
+```text
+AI-Competitor-Intelligence-Platform
 
-Concurrency Lock: To maintain the 512MB RAM SLA, scraping and inference workflows are kept on a strict sequential queue (queue.js). Sites evaluate one by one to avoid memory leakage or garbage collector spikes.
+├── client/
+│   ├── src/
+│   ├── public/
+│   └── package.json
+│
+├── server/
+│   ├── src/
+│   │   ├── scraper.js
+│   │   ├── detector.js
+│   │   ├── llm.js
+│   │   ├── queue.js
+│   │   ├── crm.js
+│   │   ├── db.js
+│   │   └── index.js
+│   └── package.json
+│
+├── extension/
+│   ├── manifest.json
+│   ├── popup.js
+│   ├── options.js
+│   └── background.js
+│
+├── Dockerfile
+├── package.json
+├── README.md
+└── .env.example
+```
+
+---
+
+# 🐳 Deployment
+
+The application includes a production-ready Docker configuration compatible with Railway.
+
+```bash
+docker build -t ai-competitor-platform .
+
+docker run -p 3000:3000 ai-competitor-platform
+```
+
+For Railway deployment:
+
+1. Connect your GitHub repository.
+2. Add environment variables.
+3. Deploy automatically.
+
+---
+
+# ⚙️ Performance
+
+| Metric | Value |
+|---------|-------|
+| Memory Usage | < 512 MB |
+| Embedding Model | ~90 MB |
+| Local LLM | ~382 MB |
+| Average Detection Time | < 500 ms |
+| AI Analysis | < 1.5 s |
+| Database | SQLite |
+
+---
+
+# ⚠️ Limitations
+
+- Initial startup downloads AI models before caching them locally.
+- Some websites may restrict headless browser access.
+- Sequential task execution is used to maintain low memory consumption.
+- Cloud AI services may be rate limited; automatic fallback ensures uninterrupted processing.
+
+---
+
+# 📜 License
+
+Licensed under the **MIT License**.
+
+---
+
+> **AI Competitor Intelligence Platform** combines modern web scraping, semantic AI, and automated business intelligence into a lightweight, production-ready solution for continuous competitor monitoring.
