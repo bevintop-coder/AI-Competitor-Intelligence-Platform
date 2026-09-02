@@ -1,0 +1,58 @@
+node_modules/
+.env
+.env.local
+
+dist/
+build/
+.vite/
+coverage/
+
+*.log
+
+# AI Models
+*.onnx
+*.gguf
+*.bin
+*.safetensors
+models/
+model_cache/
+.huggingface/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Scraping data
+scraped/
+snapshots/
+web_cache/
+
+# Local browser data
+browser-data/
+puppeteer-cache/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE
+.idea/
+*.iml
+.vscode/*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime
+*.pid
+*.pid.lock
+
+# Local secrets
+*.key
+*.pem
+credentials/
+secrets/
